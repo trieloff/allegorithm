@@ -1,0 +1,17 @@
+{
+  "name": "allegorithm",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A programming language that speaks in the language of meaning",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "license": "Apache-2.0"
+}
