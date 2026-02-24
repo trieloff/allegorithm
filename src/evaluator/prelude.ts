@@ -12,6 +12,7 @@ import {
 import {
   isContra, contraYes, contraNo, contraTension, contraSite, isHighTension,
 } from '../types/contra.js';
+import { printValue as formatValue } from '../printer/printer.js';
 
 /** A built-in function: receives evaluated arguments, returns a value. */
 export type BuiltinFn = (args: AlgValue[]) => AlgValue;
@@ -288,13 +289,13 @@ register('high-tension?', (args) => {
 // ── Printing ─────────────────────────────────────────────────────────
 
 register('print', (args) => {
-  const out = args.map(printValue).join(' ');
+  const out = args.map(formatValue).join(' ');
   process.stdout.write(out);
   return mkSym('nil');
 });
 
 register('println', (args) => {
-  const out = args.map(printValue).join(' ');
+  const out = args.map(formatValue).join(' ');
   process.stdout.write(out + '\n');
   return mkSym('nil');
 });
@@ -330,33 +331,6 @@ function algEqual(a: AlgValue, b: AlgValue): boolean {
     return a.bits === b.bits;
   }
   return a === b; // reference equality for closures, etc.
-}
-
-function printValue(v: AlgValue): string {
-  switch (v.kind) {
-    case 'atom':
-      if (v.isSymbol) return String(v.value);
-      if (typeof v.value === 'string') return `"${v.value}"`;
-      return String(v.value);
-    case 'list':
-      return `(${v.items.map(printValue).join(' ')})`;
-    case 'closure':
-      return '#<closure>';
-    case 'verdict':
-      return `#<verdict:${v.bits}>`;
-    case 'contra':
-      return `#<contra:${printValue(v.yes)}|${printValue(v.no)}>`;
-    case 'hypothesis':
-      return `#<hypothesis:${printValue(v.value)} debt="${v.debt}">`;
-    case 'authority':
-      return `#<authority:${v.name}>`;
-    case 'attestation':
-      return `#<attestation:${v.authority.name}>`;
-    case 'fable':
-      return '#<fable>';
-    case 'reading':
-      return `#<reading:${v.name}>`;
-  }
 }
 
 export { builtins };

@@ -165,7 +165,9 @@ Allegorithm is not computer science. It is **the humanities of computation**. Th
 
 ## Status
 
-**Foundation Built** — the core runtime is implemented and tested (320 tests passing):
+**Status: Phase 1 Complete — Foundation Runtime**
+
+The core runtime is implemented and tested (344 tests passing):
 
 - **Parser** — Full S-expression parser with position tracking and quote sugar
 - **Type System** — 10 value types including Verdict (Belnap four-valued), Contra (first-class contradictions), Hypothesis (oracle output with witness debt), Authority (partial-order, probabilistic)
@@ -173,16 +175,17 @@ Allegorithm is not computer science. It is **the humanities of computation**. Th
 - **Evidence System** — `claim`, `affirm`, `deny` accumulate evidence without overwriting; `meaning` inspects tension
 - **Readings Engine** — Meaning graphs, `defreading`, `with-reading`, `polyread` coherence checking, `allegorize`
 - **Court System** — Authority as partial order with probabilistic dominance, `canon`, `refute`, attestations, multiple court policies
-- **Oracle** — LLM integration as hypothesis-generator with explicit witness debt, mock client for testing
+- **Oracle** — LLM integration as hypothesis-generator with explicit witness debt
+- **REPL & CLI** — Interactive REPL and file runner
 
-**Next**: REPL/CLI, domain primitives (event system, layer composition, moral extraction), standard readings canon, example programs.
-
-## Getting Started
-
+Try it:
 ```bash
-npm install allegorithm
+npm install
 npx allegorithm repl
+npx allegorithm run examples/contradiction.alg
 ```
+
+**Next**: Phase 2 — domain primitives (event system, layer composition, moral/Noether extraction), standard readings canon, example programs.
 
 ## License
 
