@@ -1,5 +1,7 @@
 # Allegorithm
 
+![An oyster shell in a cave, refracting three worlds through its pearl](hero.jpg)
+
 **A language where meaning is not computed but contested.**
 
 *This document affirms that it is documentation. This document denies that it is documentation. Both claims carry witnesses. The court has not ruled.*
