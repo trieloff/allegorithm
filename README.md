@@ -165,19 +165,22 @@ Allegorithm is not computer science. It is **the humanities of computation**. Th
 
 ## Status
 
-**Status: Phase 1.5 Complete — Polysemy and Side-Effect Discipline**
+**Status: Phase 2 Complete — Domain Primitives**
 
-The core runtime plus polysemy features are implemented and tested (369 tests passing):
+The core runtime plus domain primitives are implemented and tested (453 tests passing):
 
 - **Parser** — Full S-expression parser with position tracking and quote sugar
-- **Type System** — 11 value types including Verdict (Belnap four-valued), Contra (first-class contradictions), Hypothesis (oracle output with witness debt), Authority (partial-order, probabilistic), Polysemous (multiple lawful readings)
-- **Evaluator** — Lexical scope, closures, and the contradiction-producing `if`: when a condition is Both, both branches execute and the disagreement is returned as a first-class value. Pure functions automatically propagate polysemy.
+- **Type System** — 11 value types including Verdict (Belnap four-valued), Contra (first-class contradictions), Hypothesis, Authority, Polysemous
+- **Evaluator** — Lexical scope, closures, contradiction-producing `if`, automatic polysemy propagation
 - **Evidence System** — `claim`, `affirm`, `deny` accumulate evidence without overwriting; `meaning` inspects tension
-- **Readings Engine** — Meaning graphs, `defreading`, `with-reading`, `polyread` structural coherence checking, `allegorize`
-- **Polysemy** — `alledge` creates values with multiple named readings; `read-all` and `read-as` extract them
-- **Side-Effect Discipline** — `utter!` (fan across all readings), `utter?` (guard: only if certain), `utter...` (pick first). Bare side-effectful calls are errors — you must declare your polysemy stance.
-- **Court System** — Authority as partial order with probabilistic dominance, `canon`, `refute`, attestations, multiple court policies
-- **Oracle** — LLM integration as hypothesis-generator with explicit witness debt
+- **Readings Engine** — Meaning graphs, `defreading`, `polyread` structural coherence, `allegorize`
+- **Polysemy** — `alledge` creates values with multiple named readings; `utter!`/`utter?`/`utter...` side-effect discipline
+- **Court System** — Authority as partial order, probabilistic dominance, `canon`, `refute`, attestations
+- **Oracle** — LLM as hypothesis-generator with explicit witness debt
+- **Event System** — `rule`, `transfer`, `embed`, `on`/`emit`, cyclic state containers, invariants
+- **Layer Composition** — `deflayer`, `defstack`, `doll`, `wrap`/`unwrap` with left-inverse property
+- **Moral Extraction** — `deflagrangian`, `(moral ...)` extracts conservation laws via Noether's theorem
+- **Standard Readings** — mech↔elec oscillator, network↔Markov chain — proof that allegoresis works
 - **REPL & CLI** — Interactive REPL and file runner
 
 Try it:
@@ -187,7 +190,7 @@ npx allegorithm repl
 npx allegorithm run examples/hello-oyster.alg
 ```
 
-**Next**: Phase 2 — domain primitives (event system, layer composition, moral/Noether extraction), standard readings canon, example programs.
+**Next**: Example programs demonstrating the full language.
 
 ## License
 

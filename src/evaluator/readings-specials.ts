@@ -13,7 +13,7 @@
  *   (allegorize R fable)         → Fable (re-read IR)
  */
 
-import type { ASTNode } from '../parser/ast.js';
+import type { ASTNode, SymbolNode } from '../parser/ast.js';
 import type { AlgValue, Reading, Fable } from '../types/values.js';
 import { mkFable, mkReading, mkSym, mkStr, mkNum, mkList } from '../types/values.js';
 import type { EvalContext } from './context.js';
@@ -90,7 +90,7 @@ export async function handleDefreading(args: ASTNode[], ctx: EvalContext, evalFn
         case 'spine':
           // Treat spine as a symbol name, not an expression to evaluate
           if (args[i].type === 'symbol') {
-            spine = mkSym(args[i].name);
+            spine = mkSym((args[i] as SymbolNode).name);
           } else {
             spine = await evalFn(args[i], ctx);
           }

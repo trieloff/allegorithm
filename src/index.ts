@@ -44,6 +44,60 @@ registerSpecial('polyread', async (args, ctx, evalExpr) =>
 registerSpecial('allegorize', async (args, ctx, evalExpr) =>
   handleAllegorize(args, ctx, (node, c) => evalExpr(node, c)));
 
+// ── Wire up layer/stack/doll specials ─────────────────────────────────
+import {
+  handleDeflayer, handleDefstack, handleDoll,
+  handleHdr, handlePayload,
+  handleWrap, handleUnwrap, handleRequire,
+} from './domain/layers.js';
+
+registerSpecial('deflayer', handleDeflayer);
+registerSpecial('defstack', handleDefstack);
+registerSpecial('doll', handleDoll);
+registerSpecial('hdr', handleHdr);
+registerSpecial('payload', handlePayload);
+registerSpecial('wrap', handleWrap);
+registerSpecial('unwrap', handleUnwrap);
+registerSpecial('require', handleRequire);
+
+// ── Wire up event/state specials ─────────────────────────────────────
+import {
+  handleState, handleStateSegments, handleStateNth, handleStateCount,
+} from './domain/state.js';
+import {
+  handleRule, handleTransfer, handleEmbed,
+  handleOn, handleEmit, handleInvariant, handleCheckInvariants,
+  handleMakeSegment, handleGetField, handleSumField,
+} from './domain/events.js';
+
+registerSpecial('state', handleState);
+registerSpecial('state-segments', handleStateSegments);
+registerSpecial('state-nth', handleStateNth);
+registerSpecial('state-count', handleStateCount);
+registerSpecial('rule', handleRule);
+registerSpecial('transfer', handleTransfer);
+registerSpecial('embed', handleEmbed);
+registerSpecial('on', handleOn);
+registerSpecial('emit', handleEmit);
+registerSpecial('invariant', handleInvariant);
+registerSpecial('check-invariants', handleCheckInvariants);
+registerSpecial('make-segment', handleMakeSegment);
+registerSpecial('get-field', handleGetField);
+registerSpecial('sum-field', handleSumField);
+
+// ── Wire up Lagrangian/moral specials ────────────────────────────────
+import {
+  handleDeflagrangian, handleSimulateLagrangian,
+} from './domain/lagrangian.js';
+import {
+  handleMoral, handleCheckConservation,
+} from './domain/moral.js';
+
+registerSpecial('deflagrangian', handleDeflagrangian);
+registerSpecial('simulate-lagrangian', handleSimulateLagrangian);
+registerSpecial('moral', handleMoral);
+registerSpecial('check-conservation', handleCheckConservation);
+
 // ── Re-exports ───────────────────────────────────────────────────────
 export { parse } from './parser/index.js';
 export { evalExpr } from './evaluator/eval.js';
