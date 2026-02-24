@@ -5,11 +5,46 @@
 import type { ASTNode } from '../parser/index.js';
 import type { AlgValue } from '../types/index.js';
 import type { EvalContext } from './context.js';
-import { mkNum, mkStr } from '../types/index.js';
+import { mkNum, mkStr, mkPolysemous } from '../types/index.js';
 import { envLookup } from './env.js';
 import { getSpecial } from './specials.js';
 import { getBuiltin } from './prelude.js';
 import { applyClosure } from './apply.js';
+
+/**
+ * Compute the cartesian product of polysemous args.
+ * Non-polysemous values are repeated in every combination.
+ * Reading names are joined with "×" for products.
+ */
+function cartesianExpand(args: AlgValue[]): { name: string; values: AlgValue[] }[] {
+  // Start with a single empty combination
+  let combos: { names: string[]; values: AlgValue[] }[] = [{ names: [], values: [] }];
+
+  for (const arg of args) {
+    if (arg.kind === 'polysemous') {
+      const next: { names: string[]; values: AlgValue[] }[] = [];
+      for (const combo of combos) {
+        for (const reading of arg.readings) {
+          next.push({
+            names: [...combo.names, reading.name],
+            values: [...combo.values, reading.value],
+          });
+        }
+      }
+      combos = next;
+    } else {
+      // Non-polysemous: append to every combo
+      for (const combo of combos) {
+        combo.values.push(arg);
+      }
+    }
+  }
+
+  return combos.map(c => ({
+    name: c.names.join('×'),
+    values: c.values,
+  }));
+}
 
 /**
  * Evaluate an AST node in the given context, returning an AlgValue.
@@ -57,6 +92,25 @@ export async function evalExpr(ast: ASTNode, ctx: EvalContext): Promise<AlgValue
       const args: AlgValue[] = [];
       for (const arg of ast.elements.slice(1)) {
         args.push(await evalExpr(arg, ctx));
+      }
+
+      // Check for polysemy propagation: pure functions map over polysemous args
+      const hasPolysemy = args.some(a => a.kind === 'polysemous');
+      if (hasPolysemy) {
+        const expanded = cartesianExpand(args);
+        const results: { name: string; value: AlgValue }[] = [];
+        for (const { name, values } of expanded) {
+          if (fn.kind === 'closure') {
+            results.push({ name, value: await applyClosure(fn, values, ctx, evalExpr) });
+          } else if (fn.kind === 'atom' && fn.isSymbol && typeof fn.value === 'string' && fn.value.startsWith('__builtin__:')) {
+            const bname = fn.value.slice('__builtin__:'.length);
+            const builtin = getBuiltin(bname);
+            if (builtin) results.push({ name, value: builtin(values) });
+          } else {
+            throw new Error(`Cannot call ${fn.kind} as a function`);
+          }
+        }
+        return mkPolysemous(results);
       }
 
       // Closure application

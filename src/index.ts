@@ -9,6 +9,7 @@
 // Court and oracle specials register themselves on import.
 import './evaluator/court-specials.js';
 import './evaluator/oracle-specials.js';
+import './evaluator/side-effects.js';
 
 // ── Wire up evidence specials ────────────────────────────────────────
 import { registerSpecial } from './evaluator/specials.js';
@@ -22,26 +23,26 @@ registerSpecial('deny', handleDeny);
 registerSpecial('meaning', handleMeaning);
 registerSpecial('resolve', handleResolve);
 
-// ── Wire up readings specials (sync → async wrapper) ─────────────────
+// ── Wire up readings specials ────────────────────────────────────────
 import {
   handleDeffable, handleDefreading, handleWithReading,
   handlePolyread, handleAllegorize,
 } from './evaluator/readings-specials.js';
 
 registerSpecial('deffable', async (args, ctx, evalExpr) =>
-  handleDeffable(args, ctx, (node, c) => evalExpr(node, c) as any));
+  handleDeffable(args, ctx, (node, c) => evalExpr(node, c)));
 
 registerSpecial('defreading', async (args, ctx, evalExpr) =>
-  handleDefreading(args, ctx, (node, c) => evalExpr(node, c) as any));
+  handleDefreading(args, ctx, (node, c) => evalExpr(node, c)));
 
 registerSpecial('with-reading', async (args, ctx, evalExpr) =>
-  handleWithReading(args, ctx, (node, c) => evalExpr(node, c) as any));
+  handleWithReading(args, ctx, (node, c) => evalExpr(node, c)));
 
 registerSpecial('polyread', async (args, ctx, evalExpr) =>
-  handlePolyread(args, ctx, (node, c) => evalExpr(node, c) as any));
+  handlePolyread(args, ctx, (node, c) => evalExpr(node, c)));
 
 registerSpecial('allegorize', async (args, ctx, evalExpr) =>
-  handleAllegorize(args, ctx, (node, c) => evalExpr(node, c) as any));
+  handleAllegorize(args, ctx, (node, c) => evalExpr(node, c)));
 
 // ── Re-exports ───────────────────────────────────────────────────────
 export { parse } from './parser/index.js';

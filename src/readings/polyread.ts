@@ -28,23 +28,43 @@ export interface PolyreadResult {
  * steady-state estimate.
  *
  * Full ODE simulation is out of scope. This produces a symbolic/numeric
- * summary: node count, edge count, and observable expressions as strings.
+ * summary: node count, edge count, connectivity, and role distribution.
+ *
+ * Structural invariants (prefixed with __) are the same across coherent
+ * readings — only surface names differ, which is the whole point of allegory.
  */
-function extractObservables(graph: MeaningGraph): Map<string, AlgValue> {
+function extractObservables(graph: MeaningGraph, originalGraph?: MeaningGraph): Map<string, AlgValue> {
   const result = new Map<string, AlgValue>();
 
-  // Encode structural properties as numeric values
+  // Structural invariants (same across coherent readings)
   result.set('__nodeCount', mkNum(graph.nodes.size));
   result.set('__edgeCount', mkNum(graph.edges.length));
 
-  // Each observable expression becomes a string value
+  // Connectivity signature: encode which node IDs connect to which
+  // Node IDs are stable across readings (applyReading doesn't change IDs)
+  const connectivitySig = graph.edges
+    .map(e => `${e.from}->${e.to}`)
+    .sort()
+    .join(';');
+  result.set('__connectivity', mkStr(connectivitySig));
+
+  // Role distribution from the ORIGINAL graph (if available)
+  // The original graph has the domain-neutral bond-graph roles (I, C, R, etc.)
+  // which are invariant across readings. The remapped graph has surface names.
+  if (originalGraph) {
+    const roleCounts = new Map<string, number>();
+    for (const node of originalGraph.nodes.values()) {
+      roleCounts.set(node.type, (roleCounts.get(node.type) ?? 0) + 1);
+    }
+    const rolesSig = [...roleCounts.entries()].sort().map(([t, c]) => `${t}:${c}`).join(',');
+    result.set('__roles', mkStr(rolesSig));
+  }
+
+  // Observable expressions (these WILL differ across readings — that's fine)
+  // They are NOT compared for structural coherence
   for (const [name, expr] of graph.observables) {
     result.set(name, mkStr(expr));
   }
-
-  // Encode topology signature: sorted node types joined
-  const types = [...graph.nodes.values()].map(n => n.type).sort().join(',');
-  result.set('__topology', mkStr(types));
 
   return result;
 }
@@ -56,8 +76,8 @@ function extractObservables(graph: MeaningGraph): Map<string, AlgValue> {
  * divergence between reading results.
  *
  * Returns 0 when all readings produce identical structure, >0 otherwise.
- * The residual is the count of differing observable values across
- * all reading pairs.
+ * Only compares STRUCTURAL keys (__nodeCount, __edgeCount, __connectivity,
+ * __roles) — surface names are supposed to differ across readings.
  */
 function defaultCompareKernel(results: ReadonlyMap<string, AlgValue>): number {
   const entries = [...results.entries()];
@@ -80,13 +100,16 @@ function defaultCompareKernel(results: ReadonlyMap<string, AlgValue>): number {
   }
 
   const names = [...readingNames];
+  // Only compare STRUCTURAL keys — not surface names
+  const structuralKeys = ['__nodeCount', '__edgeCount', '__connectivity', '__roles'];
   for (let i = 0; i < names.length; i++) {
     for (let j = i + 1; j < names.length; j++) {
       const obsA = obsByReading.get(names[i]) ?? new Map();
       const obsB = obsByReading.get(names[j]) ?? new Map();
-      const allKeys = new Set([...obsA.keys(), ...obsB.keys()]);
-      for (const k of allKeys) {
-        if (obsA.get(k) !== obsB.get(k)) diffs++;
+      for (const k of structuralKeys) {
+        const a = obsA.get(k);
+        const b = obsB.get(k);
+        if (a !== undefined && b !== undefined && a !== b) diffs++;
       }
     }
   }
@@ -122,18 +145,18 @@ export async function polyread(
 
   for (const reading of readings) {
     const reread = applyReading(graph, reading);
-    const observables = extractObservables(reread);
+    const observables = extractObservables(reread, graph);
 
     // Store per-reading results with prefixed keys for the kernel
     for (const [obsName, obsVal] of observables) {
       combinedResults.set(`${reading.name}:${obsName}`, obsVal);
     }
 
-    // Store a summary value per reading (topology signature)
-    const topology = observables.get('__topology');
-    if (topology) {
-      perReadingResults.set(reading.name, topology);
-    }
+    // Store a summary value per reading (structural signature)
+    const connectivity = observables.get('__connectivity');
+    const roles = observables.get('__roles');
+    const summary = roles ?? connectivity ?? mkStr('unknown');
+    perReadingResults.set(reading.name, summary);
   }
 
   const residual = compareKernel(combinedResults);

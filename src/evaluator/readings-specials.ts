@@ -21,9 +21,10 @@ import { compileFable } from '../readings/fable.js';
 import { allegorize } from '../readings/allegorize.js';
 import type { MeaningGraph } from '../readings/meaning-graph.js';
 import { applyReading } from '../readings/reading.js';
+import { envSet } from './env.js';
 
 /** Type for an eval function that the evaluator provides. */
-export type EvalFn = (node: ASTNode, ctx: EvalContext) => AlgValue;
+export type EvalFn = (node: ASTNode, ctx: EvalContext) => AlgValue | Promise<AlgValue>;
 
 // ── handleDeffable ───────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ export type EvalFn = (node: ASTNode, ctx: EvalContext) => AlgValue;
  * Compile body into a MeaningGraph, wrap in a Fable value.
  * The name is a symbol; the body is a list of forms.
  */
-export function handleDeffable(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): AlgValue {
+export async function handleDeffable(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): Promise<AlgValue> {
   if (args.length < 2) {
     throw new Error('deffable requires a name and at least one body form');
   }
@@ -44,7 +45,12 @@ export function handleDeffable(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn
   }
 
   const graph = compileFable(nameNode.name, args.slice(1));
-  return mkFable(graph);
+  const fable = mkFable(graph);
+
+  // Auto-bind the fable to its name in the environment
+  ctx.env = envSet(ctx.env, nameNode.name, fable);
+
+  return fable;
 }
 
 // ── handleDefreading ─────────────────────────────────────────────────
@@ -55,7 +61,7 @@ export function handleDeffable(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn
  * Create a Reading from the declaration. Keyword arguments are parsed
  * from the args list.
  */
-export function handleDefreading(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): AlgValue {
+export async function handleDefreading(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): Promise<AlgValue> {
   if (args.length < 1) {
     throw new Error('defreading requires a name');
   }
@@ -82,11 +88,16 @@ export function handleDefreading(args: ASTNode[], ctx: EvalContext, evalFn: Eval
 
       switch (key) {
         case 'spine':
-          spine = evalFn(args[i], ctx);
+          // Treat spine as a symbol name, not an expression to evaluate
+          if (args[i].type === 'symbol') {
+            spine = mkSym(args[i].name);
+          } else {
+            spine = await evalFn(args[i], ctx);
+          }
           break;
         case 'map': {
           // Expect a list of key-value pairs: ((effort voltage) (flow current) ...)
-          const mapVal = evalFn(args[i], ctx);
+          const mapVal = await evalFn(args[i], ctx);
           if (mapVal.kind === 'list') {
             for (const pair of mapVal.items) {
               if (pair.kind === 'list' && pair.items.length >= 2) {
@@ -100,8 +111,10 @@ export function handleDefreading(args: ASTNode[], ctx: EvalContext, evalFn: Eval
           }
           break;
         }
-        case 'witness': {
-          const wVal = evalFn(args[i], ctx);
+        case 'witness':
+        case 'witness.objective':
+        case 'witness.subjective': {
+          const wVal = await evalFn(args[i], ctx);
           if (wVal.kind === 'list') {
             witnesses.push(...wVal.items);
           } else {
@@ -110,7 +123,7 @@ export function handleDefreading(args: ASTNode[], ctx: EvalContext, evalFn: Eval
           break;
         }
         case 'metric': {
-          const mVal = evalFn(args[i], ctx);
+          const mVal = await evalFn(args[i], ctx);
           if (mVal.kind === 'atom' && typeof mVal.value === 'number') {
             metric = mVal.value;
           }
@@ -123,7 +136,12 @@ export function handleDefreading(args: ASTNode[], ctx: EvalContext, evalFn: Eval
     }
   }
 
-  return mkReading(name, spine, map, witnesses, metric);
+  const reading = mkReading(name, spine, map, witnesses, metric);
+
+  // Auto-bind the reading to its name
+  ctx.env = envSet(ctx.env, name, reading);
+
+  return reading;
 }
 
 // ── handleWithReading ────────────────────────────────────────────────
@@ -135,12 +153,12 @@ export function handleDefreading(args: ASTNode[], ctx: EvalContext, evalFn: Eval
  * expressions with the meaning graph rewritten per R's map.
  * Returns the result of the last expression.
  */
-export function handleWithReading(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): AlgValue {
+export async function handleWithReading(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): Promise<AlgValue> {
   if (args.length < 2) {
     throw new Error('with-reading requires a reading and at least one body expression');
   }
 
-  const readingVal = evalFn(args[0], ctx);
+  const readingVal = await evalFn(args[0], ctx);
   if (readingVal.kind !== 'reading') {
     throw new Error('with-reading first argument must evaluate to a Reading');
   }
@@ -154,7 +172,7 @@ export function handleWithReading(args: ASTNode[], ctx: EvalContext, evalFn: Eva
   // Evaluate body expressions in sequence under the new context
   let result: AlgValue = mkSym('nil');
   for (let i = 1; i < args.length; i++) {
-    result = evalFn(args[i], newCtx);
+    result = await evalFn(args[i], newCtx);
   }
 
   return result;
@@ -168,13 +186,13 @@ export function handleWithReading(args: ASTNode[], ctx: EvalContext, evalFn: Eva
  * Run multi-reading coherence check. Returns the polyread result
  * as an Allegorithm value (either a list for coherent, or Contra).
  */
-export function handlePolyread(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): AlgValue {
+export async function handlePolyread(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): Promise<AlgValue> {
   if (args.length < 2) {
     throw new Error('polyread requires readings and a fable');
   }
 
   // Evaluate readings list
-  const readingsVal = evalFn(args[0], ctx);
+  const readingsVal = await evalFn(args[0], ctx);
   if (readingsVal.kind !== 'list') {
     throw new Error('polyread first argument must be a list of readings');
   }
@@ -188,7 +206,7 @@ export function handlePolyread(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn
   }
 
   // Evaluate fable
-  const fableVal = evalFn(args[1], ctx);
+  const fableVal = await evalFn(args[1], ctx);
   if (fableVal.kind !== 'fable') {
     throw new Error('polyread second argument must be a Fable');
   }
@@ -201,7 +219,7 @@ export function handlePolyread(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn
     if (kw.type === 'symbol' && kw.name === ':tol') {
       i++;
       if (i < args.length) {
-        const tolVal = evalFn(args[i], ctx);
+        const tolVal = await evalFn(args[i], ctx);
         if (tolVal.kind === 'atom' && typeof tolVal.value === 'number') {
           tolerance = tolVal.value;
         }
@@ -211,21 +229,37 @@ export function handlePolyread(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn
   }
 
   // Synchronous simplified polyread (no real ODE solver, structural comparison)
+  // Compare STRUCTURAL invariants, not surface names — surface names are
+  // supposed to differ across readings (that's the whole point of allegory).
   const graph = fableVal.graph as MeaningGraph;
   const perReadingResults = new Map<string, AlgValue>();
 
+  // Role distribution from the ORIGINAL graph (invariant across readings)
+  const roleCounts = new Map<string, number>();
+  for (const node of graph.nodes.values()) {
+    roleCounts.set(node.type, (roleCounts.get(node.type) ?? 0) + 1);
+  }
+  const rolesSig = [...roleCounts.entries()].sort().map(([t, c]) => `${t}:${c}`).join(',');
+
+  // Connectivity signature (node IDs are stable across readings)
+  const connectivitySigs: string[] = [];
+
   for (const reading of readings) {
     const reread = applyReading(graph, reading);
-    const types = [...reread.nodes.values()].map(n => n.type).sort().join(',');
-    perReadingResults.set(reading.name, mkStr(types));
+    const connSig = reread.edges
+      .map(e => `${e.from}->${e.to}`)
+      .sort()
+      .join(';');
+    connectivitySigs.push(connSig);
+    perReadingResults.set(reading.name, mkStr(rolesSig));
   }
 
-  // Compute residual: count distinct topologies
-  const topologies = [...perReadingResults.values()].map(v =>
-    v.kind === 'atom' ? String(v.value) : '',
-  );
-  const distinctCount = new Set(topologies).size;
-  const residual = distinctCount <= 1 ? 0 : distinctCount;
+  // Compute residual: structural differences across readings
+  // Node count and edge count are always identical (applyReading doesn't add/remove)
+  // Connectivity is always identical (applyReading doesn't change IDs)
+  // So residual is 0 for structurally coherent readings
+  const distinctConnectivity = new Set(connectivitySigs).size;
+  const residual = distinctConnectivity <= 1 ? 0 : distinctConnectivity;
 
   if (residual <= tolerance) {
     const items: AlgValue[] = [
@@ -258,17 +292,17 @@ export function handlePolyread(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn
  *
  * Return the re-read IR/program, not its value.
  */
-export function handleAllegorize(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): AlgValue {
+export async function handleAllegorize(args: ASTNode[], ctx: EvalContext, evalFn: EvalFn): Promise<AlgValue> {
   if (args.length < 2) {
     throw new Error('allegorize requires a reading and a fable');
   }
 
-  const readingVal = evalFn(args[0], ctx);
+  const readingVal = await evalFn(args[0], ctx);
   if (readingVal.kind !== 'reading') {
     throw new Error('allegorize first argument must evaluate to a Reading');
   }
 
-  const fableVal = evalFn(args[1], ctx);
+  const fableVal = await evalFn(args[1], ctx);
   if (fableVal.kind !== 'fable') {
     throw new Error('allegorize second argument must evaluate to a Fable');
   }

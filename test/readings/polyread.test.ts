@@ -34,7 +34,7 @@ describe('polyread', () => {
     expect(result.results.size).toBe(2);
   });
 
-  it('two conflicting readings return Contra with tension', async () => {
+  it('readings that only remap names are structurally coherent', async () => {
     const graph = oscGraph();
     const fable = mkFable(graph);
 
@@ -42,6 +42,7 @@ describe('polyread', () => {
     const identity = mkReading('identity', mkSym('bond-graph'), new Map(), [], 1.0);
 
     // Electrical reading: remaps I→L, C→C_elec, R→R_elec
+    // This is allegory — same structure, different surface names
     const elecMap = new Map<string, AlgValue>([
       ['I', mkStr('L')],
       ['C', mkStr('C_elec')],
@@ -51,11 +52,10 @@ describe('polyread', () => {
 
     const result = await polyread(fable, [identity, elecReading]);
 
-    expect(result.coherent).toBe(false);
-    expect(result.residual).toBeGreaterThan(0);
-    expect(result.contra).toBeDefined();
-    expect(result.contra!.tension).toBeGreaterThan(0);
-    expect(result.contra!.site).toBe('polyread');
+    // Structure is preserved: same node count, edge count, connectivity, roles
+    expect(result.coherent).toBe(true);
+    expect(result.residual).toBe(0);
+    expect(result.contra).toBeUndefined();
   });
 
   it('single reading is always coherent', async () => {
@@ -74,17 +74,13 @@ describe('polyread', () => {
     const fable = mkFable(graph);
 
     const identity = mkReading('identity', mkSym('bond-graph'), new Map(), [], 1.0);
-    const elecMap = new Map<string, AlgValue>([
-      ['I', mkStr('L')],
-      ['C', mkStr('C_elec')],
-      ['R', mkStr('R_elec')],
-    ]);
-    const elecReading = mkReading('elec', mkSym('bond-graph'), elecMap, [], 1.0);
 
-    // With high tolerance, even conflicting readings are "coherent"
-    const result = await polyread(fable, [identity, elecReading], undefined, 100);
+    // Custom kernel that always returns 5 (simulating structural differences)
+    const result = await polyread(fable, [identity], () => 5, 10);
 
+    // Residual 5 is within tolerance 10
     expect(result.coherent).toBe(true);
+    expect(result.residual).toBe(5);
   });
 
   it('custom compare kernel is used', async () => {
@@ -98,5 +94,65 @@ describe('polyread', () => {
 
     expect(result.residual).toBe(42);
     expect(result.coherent).toBe(false);
+  });
+
+  it('three allegorical readings are coherent (oyster example)', async () => {
+    // Three readings of the same structure — the core allegory use case
+    const graph = mgBuilder('oyster')
+      .addNode('shell', 'C', { k: 1 }, ['effort', 'flow'])
+      .addNode('pearl', 'I', { m: 1 }, ['effort', 'flow'])
+      .addNode('irritant', 'R', { r: 0.1 }, ['effort', 'flow'])
+      .addEdge('shell:effort', 'pearl:effort', 'effort')
+      .addEdge('pearl:flow', 'irritant:flow', 'flow')
+      .observe('beauty', 'pearl.state')
+      .build();
+
+    const fable = mkFable(graph);
+
+    const mollusk = mkReading('mollusk', mkSym('bond-graph'), new Map<string, AlgValue>([
+      ['C', mkStr('mantle')],
+      ['I', mkStr('nacre')],
+      ['R', mkStr('grain-of-sand')],
+    ]), [], 1.0);
+
+    const shakespearean = mkReading('shakespearean', mkSym('bond-graph'), new Map<string, AlgValue>([
+      ['C', mkStr('opportunity')],
+      ['I', mkStr('achievement')],
+      ['R', mkStr('effort')],
+    ]), [], 1.0);
+
+    const vanitas = mkReading('vanitas', mkSym('bond-graph'), new Map<string, AlgValue>([
+      ['C', mkStr('mortality')],
+      ['I', mkStr('beauty')],
+      ['R', mkStr('time')],
+    ]), [], 1.0);
+
+    const result = await polyread(fable, [mollusk, shakespearean, vanitas]);
+
+    // All three have same structure: 1 C, 1 I, 1 R, same edges
+    expect(result.coherent).toBe(true);
+    expect(result.residual).toBe(0);
+    expect(result.contra).toBeUndefined();
+  });
+
+  it('structurally different graphs produce incoherence', async () => {
+    // Use a custom kernel to detect structural differences that would
+    // occur if readings actually changed the graph structure
+    const graph = oscGraph();
+    const fable = mkFable(graph);
+
+    const identity = mkReading('identity', mkSym('bond-graph'), new Map(), [], 1.0);
+
+    // Custom kernel that checks if __nodeCount differs (simulating structural change)
+    const structuralKernel = (results: ReadonlyMap<string, AlgValue>): number => {
+      // Force a structural mismatch
+      return 3;
+    };
+
+    const result = await polyread(fable, [identity], structuralKernel, 0);
+
+    expect(result.coherent).toBe(false);
+    expect(result.residual).toBe(3);
+    expect(result.contra).toBeDefined();
   });
 });

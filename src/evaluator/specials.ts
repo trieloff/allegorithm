@@ -11,7 +11,7 @@ import type { ASTNode, ListNode } from '../parser/index.js';
 import type { AlgValue } from '../types/index.js';
 import type { EvalContext } from './context.js';
 import {
-  mkNum, mkStr, mkSym, mkList, mkVerdict, mkHypothesis,
+  mkNum, mkStr, mkSym, mkList, mkVerdict, mkHypothesis, mkPolysemous,
   BOTH, NEITHER, TRUE, FALSE,
   isTrue, isFalse,
 } from '../types/index.js';
@@ -182,3 +182,62 @@ function astToValue(node: ASTNode): AlgValue {
     case 'list': return mkList(node.elements.map(astToValue));
   }
 }
+
+// ── Polysemy specials ───────────────────────────────────────────────
+
+/** (alledge <name> :as <reading-name> <value> :as <reading-name> <value> ...) */
+registerSpecial('alledge', async (args, ctx, evalExpr) => {
+  if (args.length < 3) throw new Error('alledge requires a name and at least one :as clause');
+
+  const nameNode = args[0];
+  if (nameNode.type !== 'symbol') throw new Error('alledge: first argument must be a symbol');
+
+  const readings: { name: string; value: AlgValue }[] = [];
+  let i = 1;
+  while (i < args.length) {
+    const kwNode = args[i];
+    if (kwNode.type !== 'symbol' || kwNode.name !== ':as') {
+      throw new Error(`alledge: expected :as keyword at position ${i}, got ${kwNode.type === 'symbol' ? kwNode.name : kwNode.type}`);
+    }
+    i++;
+    if (i >= args.length) throw new Error('alledge: :as requires a reading name');
+    const readingNameNode = args[i];
+    if (readingNameNode.type !== 'symbol') throw new Error('alledge: reading name must be a symbol');
+    i++;
+    if (i >= args.length) throw new Error('alledge: :as requires a value');
+    const value = await evalExpr(args[i], ctx);
+    readings.push({ name: readingNameNode.name, value });
+    i++;
+  }
+
+  const poly = mkPolysemous(readings);
+  ctx.env = envSet(ctx.env, nameNode.name, poly);
+  return poly;
+});
+
+/** (read-all <value>) — identity on polysemous, wraps scalar in single reading */
+registerSpecial('read-all', async (args, ctx, evalExpr) => {
+  if (args.length !== 1) throw new Error('read-all requires exactly 1 argument');
+  const val = await evalExpr(args[0], ctx);
+  if (val.kind === 'polysemous') return val;
+  return mkPolysemous([{ name: 'literal', value: val }]);
+});
+
+/** (polysemous? <value>) — check if value is polysemous (does NOT propagate polysemy) */
+registerSpecial('polysemous?', async (args, ctx, evalExpr) => {
+  if (args.length !== 1) throw new Error('polysemous? requires exactly 1 argument');
+  const val = await evalExpr(args[0], ctx);
+  return mkVerdict(val.kind === 'polysemous' ? TRUE : FALSE);
+});
+
+/** (read-as <reading-name> <value>) — extract one reading by name */
+registerSpecial('read-as', async (args, ctx, evalExpr) => {
+  if (args.length !== 2) throw new Error('read-as requires exactly 2 arguments');
+  const nameNode = args[0];
+  if (nameNode.type !== 'symbol') throw new Error('read-as: first argument must be a reading name symbol');
+  const val = await evalExpr(args[1], ctx);
+  if (val.kind !== 'polysemous') return val;
+  const reading = val.readings.find(r => r.name === nameNode.name);
+  if (!reading) throw new Error(`read-as: no reading named "${nameNode.name}"`);
+  return reading.value;
+});

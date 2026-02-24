@@ -52,6 +52,9 @@ export function printValue(v: AlgValue): string {
 
     case 'reading':
       return `\uD83D\uDD2E ${v.name}`;
+
+    case 'polysemous':
+      return v.readings.map(r => `${r.name}: ${printValue(r.value)}`).join('\n');
   }
 }
 
@@ -107,5 +110,8 @@ export function prettyPrint(v: AlgValue): string {
 
     case 'reading':
       return magenta(`\uD83D\uDD2E ${v.name}`);
+
+    case 'polysemous':
+      return v.readings.map(r => `${cyan(r.name)}: ${prettyPrint(r.value)}`).join('\n');
   }
 }

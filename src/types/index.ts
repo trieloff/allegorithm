@@ -21,6 +21,7 @@ export {
   type Authority,
   type AuthorityKind,
   type Attestation,
+  type Polysemous,
   type Environment,
 
   // Constructors
@@ -28,6 +29,7 @@ export {
   mkClosure, mkFable, mkReading,
   mkVerdict, mkHypothesis,
   mkAuthority, mkAttestation,
+  mkPolysemous, isPolysemous,
   emptyEnv, extendEnv,
 } from './values.js';
 

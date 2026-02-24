@@ -203,6 +203,7 @@ register('authority?', (args) => {
   return boolToVerdict(args[0].kind === 'authority');
 });
 
+
 // ── Belnap operations ────────────────────────────────────────────────
 
 register('v-not', (args) => {

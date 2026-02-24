@@ -124,6 +124,13 @@ export interface Attestation {
   readonly court: string;
 }
 
+/** A polysemous value — simultaneously holds multiple lawful readings. Not a contradiction. */
+export interface Polysemous {
+  readonly kind: 'polysemous';
+  /** Named readings, each with a reading name and value. */
+  readonly readings: readonly { readonly name: string; readonly value: AlgValue }[];
+}
+
 // ── Union type ──────────────────────────────────────────────────────
 
 /** Every possible runtime value in Allegorithm. */
@@ -137,7 +144,8 @@ export type AlgValue =
   | Contra
   | Hypothesis
   | Authority
-  | Attestation;
+  | Attestation
+  | Polysemous;
 
 // ── Environment (for closures) ──────────────────────────────────────
 
@@ -213,6 +221,16 @@ export function mkAuthority(
 /** Create an attestation. */
 export function mkAttestation(authority: Authority, claim: AlgValue, court: string): Attestation {
   return { kind: 'attestation', authority, claim, court };
+}
+
+/** Create a polysemous value. */
+export function mkPolysemous(readings: readonly { name: string; value: AlgValue }[]): Polysemous {
+  return { kind: 'polysemous', readings };
+}
+
+/** Check if a value is polysemous. */
+export function isPolysemous(v: AlgValue): v is Polysemous {
+  return v.kind === 'polysemous';
 }
 
 /** Create an empty environment. */
