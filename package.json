@@ -2,7 +2,7 @@
   "name": "allegorithm",
   "version": "0.1.0",
   "type": "module",
-  "description": "A programming language that speaks in the language of meaning",
+  "description": "A language where programs are interpreted, not just executed",
   "main": "dist/index.js",
   "bin": {
     "allegorithm": "./src/cli.ts"
