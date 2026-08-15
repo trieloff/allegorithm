@@ -5,7 +5,8 @@
   "description": "A language where programs are interpreted, not just executed",
   "main": "dist/index.js",
   "bin": {
-    "allegorithm": "./src/cli.ts"
+    "allegorithm": "./src/cli.ts",
+    "nacre": "./src/nacre/cli.ts"
   },
   "scripts": {
     "build": "tsc",
