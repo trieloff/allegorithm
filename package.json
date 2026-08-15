@@ -11,6 +11,7 @@
   "scripts": {
     "build": "tsc",
     "build:as": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/as.nacre",
+    "build:expand": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/expand.nacre",
     "test": "vitest run",
     "test:watch": "vitest"
   },
