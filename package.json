@@ -12,11 +12,14 @@
     "build": "tsc",
     "build:as": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/as.nacre",
     "build:expand": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/expand.nacre",
+    "build:web": "npx tsx src/nacre/build-web.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/node": "^22.19.11",
+    "binaryen": "^132.0.0",
+    "playwright-core": "^1.62.1",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   },
