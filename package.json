@@ -12,6 +12,7 @@
     "build": "tsc",
     "build:as": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/as.nacre",
     "build:expand": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/expand.nacre",
+    "build:expand-gc": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/expand-gc.nacre",
     "build:web": "npx tsx src/nacre/build-web.ts",
     "test": "vitest run",
     "test:watch": "vitest"
