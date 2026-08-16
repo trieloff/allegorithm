@@ -16,6 +16,8 @@
     "build:native": "clang --target=wasm32 -O2 -nostdlib -Wl,--no-entry -Wl,--export=poke -Wl,--export=crc32 examples/native/crc32.c -o examples/native/crc32.wasm && rustc --target wasm32-unknown-unknown --crate-type=cdylib -C opt-level=z -C lto -C strip=symbols -C panic=abort examples/native/fmix.rs -o examples/native/fmix.wasm",
     "build:frei0r": "npx tsx src/nacre/cli.ts src/nacre/clj.nacre examples/mandelzoom.nacre > /tmp/mandelzoom.wat && npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/as.nacre > /tmp/as.wat && wasmtime /tmp/as.wat < /tmp/mandelzoom.wat > /tmp/mandelzoom.wasm && node -e \"const b=require('fs').readFileSync('/tmp/mandelzoom.wasm');let o='const unsigned char nacre_wasm[] = {';for(let i=0;i<b.length;i++)o+=(i%12?' ':'\\n  ')+'0x'+b[i].toString(16).padStart(2,'0')+',';o+='\\n};\\nconst unsigned int nacre_wasm_len = '+b.length+';\\n';require('fs').writeFileSync('/tmp/mandelzoom_wasm.c',o)\" && clang -O2 -shared -fPIC -I \"$WASMTIME_CAPI/include\" examples/native/frei0r_nacre.c /tmp/mandelzoom_wasm.c \"$WASMTIME_CAPI/lib/libwasmtime.a\" -lpthread -ldl -lm -o nacre_mandel.so && echo 'built nacre_mandel.so — run: FREI0R_PATH=$PWD ffmpeg -f lavfi -i frei0r_src=size=256x256:framerate=30:filter_name=nacre_mandel:filter_params=x -t 5 out.mp4'",
     "build:web": "npx tsx src/nacre/build-web.ts",
+    "fetch:kokoro": "mkdir -p models/kokoro/onnx models/kokoro/voices && B=https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main && curl -LsSf -o models/kokoro/config.json $B/config.json && curl -LsSf -o models/kokoro/tokenizer.json $B/tokenizer.json && curl -LsSf -o models/kokoro/tokenizer_config.json $B/tokenizer_config.json && curl -LsSf -o models/kokoro/onnx/model_quantized.onnx $B/onnx/model_quantized.onnx && curl -LsSf -o models/kokoro/voices/af_heart.bin $B/voices/af_heart.bin",
+    "perlmutt": "node scripts/perlmutt.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -24,6 +26,7 @@
     "@ffmpeg/ffmpeg": "^0.11.6",
     "@types/node": "^22.19.11",
     "binaryen": "^132.0.0",
+    "kokoro-js": "^1.2.1",
     "playwright-core": "^1.62.1",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
