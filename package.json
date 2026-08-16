@@ -13,6 +13,7 @@
     "build:as": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/as.nacre",
     "build:expand": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/expand.nacre",
     "build:expand-gc": "npx tsx src/nacre/cli.ts src/nacre/prelude.nacre src/nacre/expand-gc.nacre",
+    "build:native": "clang --target=wasm32 -O2 -nostdlib -Wl,--no-entry -Wl,--export=poke -Wl,--export=crc32 examples/native/crc32.c -o examples/native/crc32.wasm && rustc --target wasm32-unknown-unknown --crate-type=cdylib -C opt-level=z -C lto -C strip=symbols -C panic=abort examples/native/fmix.rs -o examples/native/fmix.wasm",
     "build:web": "npx tsx src/nacre/build-web.ts",
     "test": "vitest run",
     "test:watch": "vitest"
