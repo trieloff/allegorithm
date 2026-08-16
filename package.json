@@ -18,10 +18,12 @@
     "build:web": "npx tsx src/nacre/build-web.ts",
     "fetch:kokoro": "mkdir -p models/kokoro/onnx models/kokoro/voices && B=https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main && curl -LsSf -o models/kokoro/config.json $B/config.json && curl -LsSf -o models/kokoro/tokenizer.json $B/tokenizer.json && curl -LsSf -o models/kokoro/tokenizer_config.json $B/tokenizer_config.json && curl -LsSf -o models/kokoro/onnx/model_quantized.onnx $B/onnx/model_quantized.onnx && curl -LsSf -o models/kokoro/voices/af_heart.bin $B/voices/af_heart.bin",
     "perlmutt": "node scripts/perlmutt.mjs",
+    "film": "npx tsx scripts/hotglue.ts examples/film.hma",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@6over3/zeroperl-ts": "^1.0.10",
     "@ffmpeg/core": "^0.11.0",
     "@ffmpeg/ffmpeg": "^0.11.6",
     "@types/node": "^22.19.11",
